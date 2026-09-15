@@ -9,14 +9,17 @@
 
 ## Overview
 
-A growing organization is moving internal workloads to Microsoft Azure. Employees need access to an internal application, but that should not mean they can reach the server's administrative services. At the same time, IT needs a separate, private path for managing those servers without mixing privileged access with normal user traffic.
+A growing organization is moving internal workloads to Microsoft Azure. Employees need access to an internal application, while IT needs a separate, private path to manage the servers behind it.
 
-They need a design where:
+The design needs to:
 
-- **Users get only the access they actually need.**
-- **Administrative access comes from a separate management network.**
+Allow users to reach only the application services they need.
+Block administrative access such as SSH from the client network.
+Keep privileged access inside a dedicated management network.
+Restrict unnecessary traffic between network segments.
+Keep server and management communication private within Azure.
 
-The result is a segmented Azure environment using VNets, subnets, NSGs, custom routes, VNet Peering, Network Watcher, and Linux networking tools. The goal was not only to build the environment, but to test the controls, break parts of the path on purpose, and verify what was actually happening when a connection succeeded or failed.
+The result is a segmented Azure environment using VNets, subnets, NSGs, custom routes, VNet Peering, Network Watcher, and Linux networking tools.
 
 ## Quick Navigation
 
