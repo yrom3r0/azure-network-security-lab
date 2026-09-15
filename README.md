@@ -182,11 +182,11 @@ Route:         System Route
 
 ---
 
-## The troubleshooting moment that made the lab worth it
+Troubleshooting Case Study
 
-The most useful part of the project came when something actually failed.
+Problem
 
-From `VM-Management`, I tried to reach the web service on `VM-Server` and got:
+During cross-VNet validation, I tested connectivity from VM-Management to the web service on VM-Server and got:
 
 ```text
 connect to 10.0.10.4 port 80 failed: Connection refused
@@ -240,21 +240,6 @@ During the lab I used:
 
 ---
 
-## What I learned
-
-The biggest takeaway was that a connection problem does not automatically mean “firewall issue.”
-
-Security rules, routes, peering, the operating system, and the application can all fail independently. Testing each layer made it much easier to find the real cause without opening access unnecessarily.
-
-A few things this lab reinforced for me:
-
-- Least privilege is easier to manage when networks have clear roles.
-- A management network should provide controlled access, not unlimited trust.
-- `Connection refused` and `connection timed out` tell very different stories.
-- Routing and security need to be tested separately.
-- Azure-native tools are useful, but they are much stronger when combined with real traffic tests from the VM.
-
----
 
 ## What this project demonstrates
 
