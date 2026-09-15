@@ -1,6 +1,6 @@
 # Azure Network Security & Segmentation Lab
 
-> A practical Azure network-security case study focused on segmentation, least-privilege access, routing behavior, private connectivity, and troubleshooting.
+> Azure network security architecture implementing segmentation, Network Security Groups, VNet Peering, User Defined Routes, Azure Network Watcher, and cloud network troubleshooting.ng.
 
 ## Business Scenario
 
