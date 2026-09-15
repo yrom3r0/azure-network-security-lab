@@ -36,8 +36,6 @@ The environment uses two Azure VNets: one for application workloads and one for 
 <img src="architecture/azure-network-security-architecture.png" width="1000">
 </p>
 
-![Azure Network Security Architecture](architecture/azure-network-security-architecture.png)
-
 ### Network Design
 
 | Network | CIDR | Purpose |
