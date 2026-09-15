@@ -1,3 +1,11 @@
+![Azure](https://img.shields.io/badge/Microsoft-Azure-0078D4?logo=microsoftazure&logoColor=white)
+![Cloud Security](https://img.shields.io/badge/Cloud-Security-blue)
+![Networking](https://img.shields.io/badge/Network-Security-success)
+![Linux](https://img.shields.io/badge/Linux-Ubuntu-E95420?logo=ubuntu&logoColor=white)
+![Network Watcher](https://img.shields.io/badge/Azure-Network_Watcher-orange)
+
+
+
 # Azure Network Security & Segmentation Lab
 
 > Azure network security architecture implementing segmentation, Network Security Groups, VNet Peering, User Defined Routes, Azure Network Watcher, and cloud network troubleshooting.ng.
