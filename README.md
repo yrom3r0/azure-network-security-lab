@@ -142,17 +142,11 @@ Cross-VNet HTTP connectivity was then validated from `VM-Management` to `VM-Serv
 
 The design was tested using both operating-system-level commands and Azure-native diagnostics.
 
-### Application access
+### Client security validation
 
-From `VM-Client`, HTTP access to `VM-Server` succeeded on TCP/80.
+From `VM-Client`, HTTP access to `VM-Server` succeeded on TCP/80 while TCP/22 was blocked.
 
-![Client HTTP allowed](screenshots/03-client-http-allowed.png)
-
-### Restricted administrative access
-
-TCP/22 from the client network was tested to verify that standard client workloads could not use SSH against the server.
-
-![Client SSH blocked](screenshots/04-client-ssh-blocked.png)
+![Client security validation](screenshots/03-client-security-validation.png)
 
 ### Azure Network Watcher
 
@@ -164,7 +158,13 @@ The following tools were used during validation and troubleshooting:
 - **Connection Troubleshoot** — tested end-to-end connectivity and helped isolate failure points.
 - **Network Topology** — reviewed resource relationships and network layout.
 
-![IP Flow Verify](screenshots/05-ip-flow-verification.png)
+#### HTTP allowed
+
+![IP Flow Verify - HTTP allowed](screenshots/04-ip-flow-http-allowed.png)
+
+#### SSH denied
+
+![IP Flow Verify - SSH denied](screenshots/05-ip-flow-ssh-denied.png)
 
 ---
 
@@ -241,9 +241,9 @@ Changing firewall or NSG rules before verifying the application could have intro
 | [Architecture diagram](architecture/azure-network-security-architecture.png) | Overall Azure security design |
 | [VNet and subnet configuration](screenshots/01-vnet-subnets.png) | Network segmentation |
 | [NSG rules](screenshots/02-nsg-server-rules.png) | Least-privilege traffic control |
-| [HTTP allowed](screenshots/03-client-http-allowed.png) | Application connectivity |
-| [SSH blocked](screenshots/04-client-ssh-blocked.png) | Administrative access restriction |
-| [IP Flow Verify](screenshots/05-ip-flow-verification.png) | Azure-native NSG validation |
+| [Client security validation](screenshots/03-client-security-validation.png) | HTTP allowed and SSH blocked |
+| [IP Flow Verify - HTTP](screenshots/04-ip-flow-http-allowed.png) | Azure-native allow validation |
+| [IP Flow Verify - SSH](screenshots/05-ip-flow-ssh-denied.png) | Azure-native deny validation |
 | [UDR test](screenshots/06-routing-udr.png) | Routing behavior and blackhole testing |
 | [VNet Peering validation](screenshots/07-vnet-peering-validation.png) | Private cross-VNet connectivity |
 
