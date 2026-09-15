@@ -13,11 +13,11 @@ A growing organization is moving internal workloads to Microsoft Azure. Employee
 
 The design needs to:
 
-Allow users to reach only the application services they need.
-Block administrative access such as SSH from the client network.
-Keep privileged access inside a dedicated management network.
-Restrict unnecessary traffic between network segments.
-Keep server and management communication private within Azure.
+- Allow users to reach only the application services they need.
+- Block administrative access such as SSH from the client network.
+- Keep privileged access inside a dedicated management network.
+- Restrict unnecessary traffic between network segments.
+- Keep server and management communication private within Azure.
 
 The result is a segmented Azure environment using VNets, subnets, NSGs, custom routes, VNet Peering, Network Watcher, and Linux networking tools.
 
