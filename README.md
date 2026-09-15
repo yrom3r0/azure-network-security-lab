@@ -21,21 +21,21 @@ The design needs to:
 
 The result is a segmented Azure environment using VNets, subnets, NSGs, custom routes, VNet Peering, Network Watcher, and Linux networking tools.
 
+### At a glance
+
+- Segmented **Client, Server, and Management** networks.
+- **HTTP allowed for users; SSH restricted to the Management network.**
+- Validated with **Azure Network Watcher and real VM connectivity tests.**
+
 ## Quick Navigation
 
 - [Architecture](#architecture)
 - [Network Design](#network-design)
-- [Segmentation Evidence](#segmentation-evidence)
-- [What should be allowed?](#what-should-be-allowed)
-- [Enforcing the policy with NSGs](#enforcing-the-policy-with-nsgs)
-- [Testing it like a real user](#testing-it-like-a-real-user)
-- [What happens when routing breaks?](#what-happens-when-routing-breaks)
-- [Adding a separate management network](#adding-a-separate-management-network)
-- [Troubleshooting Case Study](#the-troubleshooting-moment-that-made-the-lab-worth-it)
-- [What I used to validate the environment](#what-i-used-to-validate-the-environment)
-- [What I learned](#what-i-learned)
+- [Security Controls](#what-should-be-allowed)
+- [Validation](#testing-it-like-a-real-user)
+- [Routing & Peering](#what-happens-when-routing-breaks)
+- [Troubleshooting](#troubleshooting-case-study)
 - [Evidence](#evidence)
-- [Next steps](#next-steps)
 
 ---
 
@@ -127,13 +127,13 @@ That gave me the behavior I wanted: the user can reach the service, but not the 
 
 Then I checked the same flows with **Azure Network Watcher**.
 
-### HTTP — allowed
+### Azure confirms client HTTP access is allowed
 
 IP Flow Verify confirmed that TCP/80 matched the intended allow rule.
 
 [![IP Flow Verify HTTP allowed](screenshots/04-ip-flow-http-allowed.png)](screenshots/04-ip-flow-http-allowed.png)
 
-### SSH — denied
+### Azure confirms client SSH access is blocked
 
 The same test confirmed that SSH from the client network was denied.
 
@@ -239,7 +239,6 @@ During the lab I used:
 - **curl, TCP tests, and Linux socket checks** to validate what was happening from the operating system itself.
 
 ---
-
 
 ## What this project demonstrates
 
