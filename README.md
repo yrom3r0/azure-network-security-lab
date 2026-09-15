@@ -76,6 +76,7 @@ The environment uses two VNets: a primary workload VNet and a dedicated manageme
 ### Segmentation Evidence
 
 [![VNet and subnet configuration](screenshots/01-vnet-subnets.png)](screenshots/01-vnet-subnets.png)
+[![VNet and subnet configuration](screenshots/1.5-vnet-subnets-mgmt.png)](screenshots/1.5-vnet-subnets-mgmt.png)
 
 ---
 
