@@ -182,9 +182,9 @@ Route:         System Route
 
 ---
 
-Troubleshooting Case Study
+## Troubleshooting Case Study
 
-Problem
+# Problem
 
 During cross-VNet validation, I tested connectivity from VM-Management to the web service on VM-Server and got:
 
