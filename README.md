@@ -11,7 +11,9 @@
 
 ## Business Scenario
 
-A growing company is moving an internal application and supporting workloads to Microsoft Azure. The company needs to separate standard user traffic, server workloads, and administrative access without exposing the environment unnecessarily to the public Internet.
+A growing organization is migrating internal workloads to Microsoft Azure and requires a secure network architecture that enforces segmentation, least-privilege access, and controlled administrative connectivity.
+
+This project demonstrates the design, implementation, validation, and troubleshooting of an Azure network security environment using Azure Virtual Networks, Network Security Groups (NSGs), User Defined Routes (UDRs), VNet Peering, and Azure Network Watcher.
 
 The security team was asked to design a network where:
 
@@ -29,6 +31,10 @@ This lab implements that scenario using Azure Virtual Networks, subnets, Network
 ## Architecture
 
 The environment uses two Azure VNets: one for application workloads and one for management access.
+
+<p align="center">
+<img src="architecture/azure-network-security-architecture.png" width="1000">
+</p>
 
 ![Azure Network Security Architecture](architecture/azure-network-security-architecture.png)
 
