@@ -5,52 +5,27 @@
 
 # Azure Network Security & Segmentation Lab
 
-> A practical Azure network-security case study focused on segmentation, least-privilege access, routing behavior, private connectivity, validation, and troubleshooting.
+> A hands-on Azure security project built around a simple question: **how do you let people reach the services they need without giving them access to everything else?**
 
-## Overview
+## Why I built this
 
-A growing organization is migrating internal workloads to Microsoft Azure and needs a network architecture that separates standard users, server workloads, and administrative access.
+I wanted to build something closer to a real network-security problem than a basic “create a VNet and a VM” lab.
 
-The objective of this project was not simply to deploy Azure resources, but to translate security requirements into a working design, validate the controls, intentionally test failure scenarios, and troubleshoot connectivity across multiple layers.
+The scenario is a small organization moving internal workloads to Azure. Regular users need access to an application, but they should not be able to administer the servers behind it. At the same time, IT needs a separate and controlled path for management access.
 
-The environment uses **Azure Virtual Networks, subnets, Network Security Groups (NSGs), User Defined Routes (UDRs), VNet Peering, Azure Network Watcher, and Linux networking tools**.
+So I built the environment around three ideas:
 
-## Quick Navigation
+- **Users should get only the access they actually need.**
+- **Administrative access should come from a separate management network.**
+- **Every rule should be tested instead of assumed to work.**
 
-- [Business Requirements](#business-requirements)
-- [Architecture](#architecture)
-- [Network Design](#network-design)
-- [Security Controls](#security-controls)
-- [Routing & UDR Testing](#routing--udr-testing)
-- [VNet Peering](#vnet-peering)
-- [Validation](#validation)
-- [Troubleshooting Case Study](#troubleshooting-case-study)
-- [Lessons Learned](#lessons-learned)
-- [Results](#results)
-- [Future Improvements](#future-improvements)
-- [Technologies](#technologies)
-
----
-
-## Business Requirements
-
-The security team requested an Azure design that would:
-
-- Separate client, server, and management workloads.
-- Allow users to reach only the application services they need.
-- Prevent standard client systems from using administrative protocols against servers.
-- Restrict privileged server administration to the management network.
-- Keep communication between Azure networks private.
-- Reduce unnecessary lateral-movement paths.
-- Validate security and routing behavior using Azure-native diagnostic tools.
-
-The resulting design follows a **least-privilege network access model** rather than treating every internal subnet as equally trusted.
+The result is a segmented Azure environment using VNets, subnets, NSGs, custom routes, VNet Peering, Network Watcher, and Linux networking tools.
 
 ---
 
 ## Architecture
 
-The environment uses two VNets: a primary workload VNet and a dedicated management VNet.
+The design uses one VNet for normal workloads and a second VNet for management access.
 
 <p align="center">
   <a href="architecture/azure-network-security-architecture.png">
@@ -60,67 +35,97 @@ The environment uses two VNets: a primary workload VNet and a dedicated manageme
 
 <p align="center"><em>Click the diagram to open the full-size architecture.</em></p>
 
-## Network Design
+### Network layout
 
-| Component | CIDR / IP | Purpose |
+| Component | CIDR / IP | What it is used for |
 |---|---|---|
 | `VNET-CloudSecurity-Lab` | `10.0.0.0/16` | Main workload network |
-| `Subnet-Servers` | `10.0.10.0/24` | Server/application workloads |
-| `Subnet-Clients` | `10.0.20.0/24` | Standard client workloads |
-| `VNET-Management` | `10.1.0.0/16` | Dedicated administration network |
+| `Subnet-Servers` | `10.0.10.0/24` | Server and application workloads |
+| `Subnet-Clients` | `10.0.20.0/24` | Standard user/client workloads |
+| `VNET-Management` | `10.1.0.0/16` | Separate administrative network |
 | `Subnet-Management` | `10.1.10.0/24` | IT/Security management workloads |
-| `VM-Server` | `10.0.10.4` | Linux application/web server |
-| `VM-Client` | `10.0.20.4` | Standard client workload |
+| `VM-Server` | `10.0.10.4` | Ubuntu web/application server |
+| `VM-Client` | `10.0.20.4` | Standard client machine |
 | `VM-Management` | `10.1.10.4` | Administrative workstation |
-
-### Segmentation Evidence
 
 [![VNet and subnet configuration](screenshots/01-vnet-subnets.png)](screenshots/01-vnet-subnets.png)
 
+---
 
-[![VNet and subnet configuration](screenshots/1.5-vnet-subnets-mgmt.png)](screenshots/1.5-vnet-subnets-mgmt.png)
+## What should be allowed?
+
+The idea was to keep the policy easy to understand.
+
+A normal client should be able to open the application over HTTP, but it should **not** be able to SSH into the server.
+
+The management network is different: it is the trusted administrative path, so it can reach the server over SSH and can also test the web service when needed.
+
+### Client → Server
+
+| Traffic | Result | Reason |
+|---|---|---|
+| HTTP `TCP/80` | **Allowed** | Users need the application |
+| SSH `TCP/22` | **Blocked** | Standard clients should not administer servers |
+| Unneeded traffic | **Restricted** | Reduce unnecessary lateral access |
+
+### Management → Server
+
+| Traffic | Result | Reason |
+|---|---|---|
+| SSH `TCP/22` | **Allowed** | Administrative access |
+| HTTP `TCP/80` | **Allowed** | Testing and troubleshooting |
+| Unneeded traffic | **Restricted** | Management should not mean unrestricted access |
 
 ---
 
-## Security Controls
+## Enforcing the policy with NSGs
 
-### Traffic Policy
+I applied Network Security Groups at the subnet level, with `NSG-Servers` protecting the server subnet.
 
-Application traffic and administrative traffic are handled as separate security classes.
+The important part was not just creating allow and deny rules, but making the rules match the role of each network:
 
-#### Client → Server
-
-| Service | Policy | Security Purpose |
-|---|---|---|
-| HTTP `TCP/80` | **Allow** | Required application access |
-| SSH `TCP/22` | **Deny** | Prevent administrative access from standard clients |
-| Other unnecessary traffic | **Deny / Restrict** | Reduce unnecessary east-west access |
-
-#### Management → Server
-
-| Service | Policy | Security Purpose |
-|---|---|---|
-| SSH `TCP/22` | **Allow** | Server administration from the management network |
-| HTTP `TCP/80` | **Allow** | Application validation and troubleshooting |
-| Other unnecessary traffic | **Deny / Restrict** | Keep management access controlled |
-
-### Network Security Groups
-
-NSGs were applied at the subnet level to enforce the policy between network segments.
-
-`NSG-Servers` evaluates traffic based on source network, protocol, and destination port. This allows normal users to access the application while keeping privileged access on the dedicated management path.
+- Client subnet → application traffic only.
+- Management subnet → approved administrative traffic.
+- Everything else → restricted unless there is a reason to allow it.
 
 [![NSG server rules](screenshots/02-nsg-server-rules.png)](screenshots/02-nsg-server-rules.png)
 
 ---
 
-## Routing & UDR Testing
+## Testing it like a real user
 
-Azure system routes were reviewed first to understand the default routing behavior between subnets.
+Before relying on Azure diagnostics, I tested the environment from the machines themselves.
 
-A custom route table, `RT-Clients`, was associated with `Subnet-Clients`.
+From `VM-Client`:
 
-To demonstrate route precedence and isolate routing failures, a temporary User Defined Route was configured:
+- HTTP to `VM-Server` worked.
+- SSH to `VM-Server` was blocked.
+
+That gave me the behavior I wanted: the user can reach the service, but not the administrative interface behind it.
+
+[![Client security validation](screenshots/03-client-security-validation.png)](screenshots/03-client-security-validation.png)
+
+Then I checked the same flows with **Azure Network Watcher**.
+
+### HTTP — allowed
+
+IP Flow Verify confirmed that TCP/80 matched the intended allow rule.
+
+[![IP Flow Verify HTTP allowed](screenshots/04-ip-flow-http-allowed.png)](screenshots/04-ip-flow-http-allowed.png)
+
+### SSH — denied
+
+The same test confirmed that SSH from the client network was denied.
+
+[![IP Flow Verify SSH denied](screenshots/05-ip-flow-ssh-denied.png)](screenshots/05-ip-flow-ssh-denied.png)
+
+---
+
+## What happens when routing breaks?
+
+I also wanted to test something that is easy to miss during troubleshooting: **an NSG can allow traffic and the connection can still fail because of routing.**
+
+To prove that, I created a temporary route table called `RT-Clients` and added this User Defined Route:
 
 ```text
 Name:        Block-Server-Subnet
@@ -128,25 +133,23 @@ Destination: 10.0.10.0/24
 Next hop:    None
 ```
 
-This intentionally created a **blackhole route** toward the server subnet.
+That route intentionally sent traffic to a black hole.
 
-The test demonstrated an important troubleshooting principle:
-
-> A security policy can allow a flow while routing independently prevents the packet from reaching the destination.
-
-The temporary blackhole route was used only for testing and removed afterward.
+In other words, even if the security rule said “allow,” the packet still had no valid path to the server.
 
 [![UDR routing test](screenshots/06-routing-udr.png)](screenshots/06-routing-udr.png)
 
+I removed the route after the test so normal connectivity was restored.
+
 ---
 
-## VNet Peering
+## Adding a separate management network
 
-`VNET-Management` was connected to `VNET-CloudSecurity-Lab` using **Azure VNet Peering**.
+Instead of placing administrators in the same network as regular users, I created `VNET-Management` and connected it to the workload VNet through **VNet Peering**.
 
-This provides private connectivity between the administrative environment and server resources without requiring public IP communication between the workloads.
+This gave the management VM a private path to the server without exposing the workloads with public IPs.
 
-Azure Network Watcher confirmed the routing decision:
+Network Watcher confirmed the routing decision:
 
 ```text
 Source:        10.1.10.4
@@ -159,146 +162,123 @@ Route:         System Route
 
 ---
 
-## Validation
+## The troubleshooting moment that made the lab worth it
 
-The environment was validated using both real traffic tests and Azure-native diagnostics.
+The most useful part of the project came when something actually failed.
 
-### 1. Client Application Access
-
-From `VM-Client`, HTTP access to `VM-Server` succeeded on TCP/80, while TCP/22 was blocked.
-
-This confirms that normal users can reach the required application service without receiving administrative access to the server.
-
-[![Client security validation](screenshots/03-client-security-validation.png)](screenshots/03-client-security-validation.png)
-
-### 2. IP Flow Verify — HTTP Allowed
-
-Azure Network Watcher confirmed that TCP/80 matched the intended allow rule.
-
-[![IP Flow Verify HTTP allowed](screenshots/04-ip-flow-http-allowed.png)](screenshots/04-ip-flow-http-allowed.png)
-
-### 3. IP Flow Verify — SSH Denied
-
-The same diagnostic workflow confirmed that TCP/22 from the client network was denied.
-
-[![IP Flow Verify SSH denied](screenshots/05-ip-flow-ssh-denied.png)](screenshots/05-ip-flow-ssh-denied.png)
-
-### Azure Network Watcher Tools Used
-
-- **IP Flow Verify** — identified whether a specific NSG rule allowed or denied a flow.
-- **Effective Security Rules** — reviewed the actual security policy applied to a workload.
-- **Next Hop** — validated Azure's routing decision.
-- **Connection Troubleshoot** — tested end-to-end connectivity and helped isolate failure points.
-- **Network Topology** — reviewed relationships between network resources.
-
----
-
-## Troubleshooting Case Study
-
-### Problem
-
-During cross-VNet validation, `VM-Management` attempted to reach the HTTP service on `VM-Server` and received:
+From `VM-Management`, I tried to reach the web service on `VM-Server` and got:
 
 ```text
 connect to 10.0.10.4 port 80 failed: Connection refused
 ```
 
-### Evidence & Investigation
+My first thought could have been “the firewall is blocking it,” but instead I checked the path one layer at a time.
 
-Instead of immediately changing firewall or NSG rules, the path was validated layer by layer.
+I verified that:
 
-The investigation confirmed:
+- VNet Peering was working.
+- Azure selected `VirtualNetworkPeering` as the next hop.
+- The NSG allowed TCP/80.
+- The route to the server was valid.
 
-- **VNet Peering:** established and working.
-- **Routing:** Azure selected `VirtualNetworkPeering` as the next hop.
-- **Server inbound NSG:** TCP/80 was permitted.
-- **Destination route:** valid.
-
-Because the connection was **refused** rather than **timed out**, the network path appeared reachable and the investigation moved to the destination service.
-
-### Root Cause
-
-On `VM-Server`, the listener was checked with:
+At that point the network looked healthy, so I checked the server itself:
 
 ```bash
 sudo ss -lntp | grep ':80'
 ```
 
-No process was listening on TCP/80.
+Nothing was listening on port 80.
 
-The temporary Python HTTP service had stopped after the VM was restarted.
+The Python HTTP service had stopped after the VM was restarted.
 
-### Resolution
-
-The HTTP service was restarted and the listener was verified on `0.0.0.0:80`.
-
-The test from `VM-Management` was repeated successfully:
+I restarted the service, tested again, and got:
 
 ```text
 HTTP/1.0 200 OK
 ```
 
-### Troubleshooting Flow
+The issue was not Azure networking at all — it was the application.
+
+That was a good reminder that network troubleshooting is usually faster when you work through the layers instead of changing firewall rules until something starts working.
 
 ```text
-Security Policy → Routing → VNet Peering → Host → Application
+Security policy → Routing → Peering → Host → Application
 ```
 
-This prevented an unnecessary NSG change that would not have solved the actual problem and could have introduced additional exposure.
+---
+
+## What I used to validate the environment
+
+During the lab I used:
+
+- **IP Flow Verify** to see which NSG rule allowed or denied a connection.
+- **Effective Security Rules** to check the policy actually applied to a workload.
+- **Next Hop** to understand Azure's routing decision.
+- **Connection Troubleshoot** to test connectivity end to end.
+- **Network Topology** to review how the resources were connected.
+- **curl, TCP tests, and Linux socket checks** to validate what was happening from the operating system itself.
 
 ---
 
-## Lessons Learned
+## What I learned
 
-This project reinforced several practical cloud-network troubleshooting principles:
+The biggest takeaway was that a connection problem does not automatically mean “firewall issue.”
 
-- **Do not assume every connectivity failure is a firewall problem.**
-- Validate security policy and routing independently.
-- A successful route does not guarantee that an application is listening.
-- `Connection refused` and `connection timed out` point toward different failure domains.
-- Azure Network Watcher is most useful when its results are correlated with real application and operating-system tests.
-- Management networks should provide controlled administrative access, not unrestricted trust.
-- Temporary failure scenarios such as blackhole routes are useful for learning how Azure behaves when different layers fail.
+Security rules, routes, peering, the operating system, and the application can all fail independently. Testing each layer made it much easier to find the real cause without opening access unnecessarily.
+
+A few things this lab reinforced for me:
+
+- Least privilege is easier to manage when networks have clear roles.
+- A management network should provide controlled access, not unlimited trust.
+- `Connection refused` and `connection timed out` tell very different stories.
+- Routing and security need to be tested separately.
+- Azure-native tools are useful, but they are much stronger when combined with real traffic tests from the VM.
 
 ---
 
-## Results
+## What this project demonstrates
 
-The completed environment demonstrates:
+This lab brings together several skills in one small environment:
 
-- Segmented client, server, and management networks.
-- Least-privilege client-to-server access.
-- Dedicated administrative access from the management network.
-- Private connectivity between VNets using Azure VNet Peering.
-- Subnet-level NSG enforcement.
-- Custom routing behavior using UDRs.
-- Azure-native validation with Network Watcher.
-- Practical TCP/IP and application-layer troubleshooting.
+- Azure network design and segmentation
+- Network Security Groups
+- Least-privilege access
+- TCP/IP troubleshooting
+- User Defined Routes
+- VNet Peering
+- Azure Network Watcher
+- Linux networking
+- Application-layer troubleshooting
+- Security validation and documentation
 
-### Project Evidence
+---
 
-| Evidence | What it demonstrates |
+## Evidence
+
+| Evidence | What it shows |
 |---|---|
-| [Architecture diagram](architecture/azure-network-security-architecture.png) | Overall Azure security design |
+| [Architecture diagram](architecture/azure-network-security-architecture.png) | Overall design |
 | [VNet and subnet configuration](screenshots/01-vnet-subnets.png) | Network segmentation |
-| [NSG rules](screenshots/02-nsg-server-rules.png) | Least-privilege traffic policy |
+| [NSG rules](screenshots/02-nsg-server-rules.png) | Traffic-control policy |
 | [Client security validation](screenshots/03-client-security-validation.png) | HTTP allowed and SSH blocked |
-| [IP Flow Verify — HTTP](screenshots/04-ip-flow-http-allowed.png) | Azure-native allow validation |
-| [IP Flow Verify — SSH](screenshots/05-ip-flow-ssh-denied.png) | Azure-native deny validation |
-| [UDR blackhole test](screenshots/06-routing-udr.png) | Custom routing behavior |
+| [IP Flow Verify — HTTP](screenshots/04-ip-flow-http-allowed.png) | Azure confirms the allow rule |
+| [IP Flow Verify — SSH](screenshots/05-ip-flow-ssh-denied.png) | Azure confirms the deny rule |
+| [UDR blackhole test](screenshots/06-routing-udr.png) | Routing failure scenario |
 | [VNet Peering validation](screenshots/07-vnet-peering-validation.png) | Private cross-VNet routing |
 
 ---
 
-## Future Improvements
+## Next steps
 
-Potential extensions to the same network-security design include:
+A few ways I could extend the environment later:
 
-- **Azure Bastion** for controlled administrative access without direct SSH exposure.
-- **Just-in-Time VM access** for temporary administrative access.
-- **Azure Firewall** or an NVA for centralized traffic inspection and policy enforcement.
-- **NSG flow logging / traffic analytics** for deeper network visibility.
-- **Point-to-Site or Site-to-Site VPN** for secure hybrid administrative connectivity.
+- Azure Bastion for controlled administrative access
+- Just-in-Time VM access
+- Azure Firewall or an NVA for centralized inspection
+- NSG flow logs and deeper traffic visibility
+- Point-to-Site or Site-to-Site VPN connectivity
+
+For this version, I intentionally kept the scope focused on **segmentation, access control, routing, private connectivity, and troubleshooting**.
 
 ---
 
@@ -310,4 +290,4 @@ Potential extensions to the same network-security design include:
 
 ## Documentation
 
-Detailed implementation and validation notes are available in [`docs/implementation-notes.md`](docs/implementation-notes.md).
+Detailed implementation notes are available in [`docs/implementation-notes.md`](docs/implementation-notes.md).
