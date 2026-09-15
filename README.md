@@ -5,21 +5,34 @@
 
 # Azure Network Security & Segmentation Lab
 
-> A hands-on Azure security project built around a simple question: **how do you let people reach the services they need without giving them access to everything else?**
+> A practical Azure network-security case study focused on segmentation, least-privilege access, routing behavior, private connectivity, validation, and troubleshooting.
 
-## Why I built this
+## Overview
 
-I wanted to build something closer to a real network-security problem than a basic “create a VNet and a VM” lab.
+A growing organization is moving internal workloads to Microsoft Azure. Employees need access to an internal application, but that should not mean they can reach the server's administrative services. At the same time, IT needs a separate, private path for managing those servers without mixing privileged access with normal user traffic.
 
-The scenario is a small organization moving internal workloads to Azure. Regular users need access to an application, but they should not be able to administer the servers behind it. At the same time, IT needs a separate and controlled path for management access.
+They need a design where:
 
-So I built the environment around three ideas:
+- **Users get only the access they actually need.**
+- **Administrative access comes from a separate management network.**
 
-- **Users should get only the access they actually need.**
-- **Administrative access should come from a separate management network.**
-- **Every rule should be tested instead of assumed to work.**
+The result is a segmented Azure environment using VNets, subnets, NSGs, custom routes, VNet Peering, Network Watcher, and Linux networking tools. The goal was not only to build the environment, but to test the controls, break parts of the path on purpose, and verify what was actually happening when a connection succeeded or failed.
 
-The result is a segmented Azure environment using VNets, subnets, NSGs, custom routes, VNet Peering, Network Watcher, and Linux networking tools.
+## Quick Navigation
+
+- [Architecture](#architecture)
+- [Network Design](#network-design)
+- [Segmentation Evidence](#segmentation-evidence)
+- [What should be allowed?](#what-should-be-allowed)
+- [Enforcing the policy with NSGs](#enforcing-the-policy-with-nsgs)
+- [Testing it like a real user](#testing-it-like-a-real-user)
+- [What happens when routing breaks?](#what-happens-when-routing-breaks)
+- [Adding a separate management network](#adding-a-separate-management-network)
+- [Troubleshooting Case Study](#the-troubleshooting-moment-that-made-the-lab-worth-it)
+- [What I used to validate the environment](#what-i-used-to-validate-the-environment)
+- [What I learned](#what-i-learned)
+- [Evidence](#evidence)
+- [Next steps](#next-steps)
 
 ---
 
@@ -35,7 +48,9 @@ The design uses one VNet for normal workloads and a second VNet for management a
 
 <p align="center"><em>Click the diagram to open the full-size architecture.</em></p>
 
-### Network layout
+---
+
+## Network Design
 
 | Component | CIDR / IP | What it is used for |
 |---|---|---|
@@ -48,33 +63,35 @@ The design uses one VNet for normal workloads and a second VNet for management a
 | `VM-Client` | `10.0.20.4` | Standard client machine |
 | `VM-Management` | `10.1.10.4` | Administrative workstation |
 
-[![VNet and subnet configuration](screenshots/01-vnet-subnets.png)](screenshots/01-vnet-subnets.png)
+### Segmentation Evidence
+
+The main workload VNet separates clients from servers, while the management VNet keeps administrative traffic on its own network.
+
+[![Client and server subnet configuration](screenshots/01-vnet-subnets.png)](screenshots/01-vnet-subnets.png)
+
+[![Management subnet configuration](screenshots/1.5-vnet-subnets-mgmt.png)](screenshots/1.5-vnet-subnets-mgmt.png)
 
 ---
 
 ## What should be allowed?
 
-The idea was to keep the policy easy to understand.
-
-A normal client should be able to open the application over HTTP, but it should **not** be able to SSH into the server.
-
-The management network is different: it is the trusted administrative path, so it can reach the server over SSH and can also test the web service when needed.
+The policy is intentionally simple: normal users can reach the application, but administrative access stays on the management network.
 
 ### Client → Server
 
-| Traffic | Result | Reason |
+| Service | Policy | Security Purpose |
 |---|---|---|
-| HTTP `TCP/80` | **Allowed** | Users need the application |
-| SSH `TCP/22` | **Blocked** | Standard clients should not administer servers |
-| Unneeded traffic | **Restricted** | Reduce unnecessary lateral access |
+| HTTP `TCP/80` | **Allow** | Required application access |
+| SSH `TCP/22` | **Deny** | Prevent administrative access from standard clients |
+| Other unnecessary traffic | **Deny / Restrict** | Reduce unnecessary east-west access |
 
-### Management → Server
+#### Management → Server
 
-| Traffic | Result | Reason |
+| Service | Policy | Security Purpose |
 |---|---|---|
-| SSH `TCP/22` | **Allowed** | Administrative access |
-| HTTP `TCP/80` | **Allowed** | Testing and troubleshooting |
-| Unneeded traffic | **Restricted** | Management should not mean unrestricted access |
+| SSH `TCP/22` | **Allow** | Server administration from the management network |
+| HTTP `TCP/80` | **Allow** | Application validation and troubleshooting |
+| Other unnecessary traffic | **Deny / Restrict** | Keep management access controlled |
 
 ---
 
@@ -259,6 +276,7 @@ This lab brings together several skills in one small environment:
 |---|---|
 | [Architecture diagram](architecture/azure-network-security-architecture.png) | Overall design |
 | [VNet and subnet configuration](screenshots/01-vnet-subnets.png) | Network segmentation |
+| [Management subnet configuration](screenshots/1.5-vnet-subnets-mgmt.png) | Dedicated management network |
 | [NSG rules](screenshots/02-nsg-server-rules.png) | Traffic-control policy |
 | [Client security validation](screenshots/03-client-security-validation.png) | HTTP allowed and SSH blocked |
 | [IP Flow Verify — HTTP](screenshots/04-ip-flow-http-allowed.png) | Azure confirms the allow rule |
